@@ -11,22 +11,21 @@
 (defun skill-filter-list (names prefixes)
   "Returns the list of names matching prefixes"
   (let (res prefix prefixes-copy)
+    ;; foreach name
     (dolist (name names)
+      ;; foreach prefix
       (setq prefixes-copy prefixes)
       (while (setq prefix (pop prefixes-copy))
+        ;; adding name to results list if name starts with prefix
         (when (> (length name) (length prefix))
           (when (equal prefix (substring name 0 (length prefix)))
             (push name res)
-            (setq prefixes-copy nil)
-          )
-        )
-      )
-    )
+            (setq prefixes-copy nil)))
+      );while
+    );dolist
     res
   );let
 );defun
-
-(skill-filter-list '("abcdef" "abcegobjn" "aiegjh" "afbjewhr" "gergb") '("abc" "a"))
 
 (defun skill-fetch-functions (file &rest prefixes)
   "Returns the list of functions name in file which describes the path of a .fnd file"
@@ -49,10 +48,9 @@
     (kill-buffer "*skill-file-content*")
   )
 );defun 
-(length (skill-fetch-functions "/sw/cadence/ic/06.17.715/lnx86/doc/finder/SKILL/DFII_SKILL/skdfref.fnd"))
-(length (skill-fetch-functions "/sw/cadence/ic/06.17.715/lnx86/doc/finder/SKILL/DFII_SKILL/caiskill.fnd"))
 
 (defun skill-fetch-documentation nil
+  "Fetch SKILL/SKILL++ functions in skill documentation (.fnd files)"
   ;; fetching SKILL documentation directory
   (unless (and (boundp 'skill-doc-root) (stringp skill-doc-root) (file-directory-p skill-doc-root))
     ;; when doc root is missing checking if virtuoso root exists in order to find documentation here
@@ -67,8 +65,9 @@
             (not (file-directory-p (concat skill-virtuoso-root skill-doc-root)))
             (not (eq skill-virtuoso-root "")))
           ;; going up one directory in virtuoso root
-          (setq split-root (split-string skill-virtuoso-root "/"))
-          (setq skill-virtuoso-root "/")
+          (setq split-root (remove "" 
+              (split-string skill-virtuoso-root "/")))
+          (setq skill-virtuoso-root "") 
           (while (cdr split-root)
             (setq skill-virtuoso-root (concat skill-virtuoso-root "/" (pop split-root)))
           );while
@@ -80,8 +79,7 @@
   ;; Documentation root should be found, fetching modules
   (let (modules module-root functions)
     (when (file-directory-p skill-doc-root)
-      (set 'modules (directory-files skill-doc-root nil "^[a-zA-Z_]*$"))
-    )
+      (set 'modules (directory-files skill-doc-root nil "^[a-zA-Z_]*$")))
     ;; fetching functions or forms in modules
     (dolist (module modules)
       (setq module-root (concat skill-doc-root "/" module))
@@ -147,22 +145,18 @@
     (insert-file-contents file)
     ;; fetching associated elements for each type
     (dolist (couple
-        '(
-          (skill-functions "^\(? *\\(defun\\|define\\|procedure\\)\(? *")
-          (skill-classes "^\(? *defclass\(? *")
-          (skill-methods "^\(? *defmethod\(? *")
-        )
-      )
+        '((skill-functions "^\(? *\\(defun\\|define\\|procedure\\)\(? *")
+         (skill-classes "^\(? *defclass\(? *")
+         (skill-methods "^\(? *defmethod\(? *")))
       (setq type (pop couple))
       (setq regexp (pop couple))
-      ;; fetching functions/classes/methods and adding it to the corresponding lists
+      ;; fetching functions/classes/methods and adding them to the corresponding lists
       (while (search-forward-regexp regexp nil t)
         (set 'point (point))
         (when (search-forward-regexp "[a-zA-Z_0-9]*" nil t)
           (set 'mark (point))
-          (eval `(push ,(buffer-substring point mark) ,type))
-        )
-      )
+          (eval `(push ,(buffer-substring point mark) ,type)))
+      );while
     );foreach
     ;; killing the created buffer
     (kill-buffer "*skill-file-content*")
